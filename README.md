@@ -31,6 +31,14 @@ The unrelated test importing only the standard library is omitted. If a module d
 
 ## Interpretation
 
-Static selection gives an import-based candidate list. Test discovery recognizes Python files named `test_*.py` or `*_test.py`. Changed non-Python files (including documentation), changed pytest conftest files, parser failures, recognized dynamic import calls, symlinks and submodules trigger selection of all recognized head tests. With identical snapshots, the plan is empty.
+Static selection gives an import-based candidate list. Test discovery recognizes Python files named `test_*.py` or `*_test.py`. Changed non-Python files (including documentation), changed pytest conftest files, parser failures, recognized unresolved dynamic import calls, symlinks and submodules trigger selection of all recognized head tests. With identical snapshots, the plan is empty.
 
-Custom pytest discovery, plugin registration, aliased dynamic loading, working-directory imports and changes to data read through Python APIs can introduce dependencies outside the graph. Use the output to prioritize an initial CI lane and keep the full suite as the merge gate. TestTrail prints a plan and never invokes the target project's test runner.
+Custom pytest discovery, plugin registration, indirect loader rebinding, working-directory imports and changes to data read through Python APIs can introduce dependencies outside the graph. Use the output to prioritize an initial CI lane and keep the full suite as the merge gate. TestTrail prints a plan and never invokes the target project's test runner.
+
+### Dynamic imports
+
+For a single literal absolute name, a call such as `load("shop.tax")` contributes a dependency edge when `load` was imported as an alias of `importlib.import_module`. An unresolved argument, relative name or multi-argument call to a recognized loader triggers full selection. The regression builds Git commits for both paths and verifies that a test importing the consumer reaches the dynamically loaded module. Runtime plugin discovery and loader rebinding remain outside the analysis.
+
+### Check predicted tests against observed failures
+
+`python3 experiments/mutations.py /path/to/batchwindow` extracts a pinned revision into disposable checkouts, establishes a green baseline, introduces three independent faults, and runs every test module for each fault. TestTrail selected all five failing module/case pairs out of six possible pairs and skipped one passing module. These are hand-selected mutations on a small public project. [Inputs and observed failures](experiments/mutation-results.json)

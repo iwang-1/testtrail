@@ -75,10 +75,15 @@ def build(sources):
             package.pop()
         imports = {".".join(package)}
         try:
-            nodes = ast.walk(ast.parse(source, filename=path))
+            nodes = list(ast.walk(ast.parse(source, filename=path)))
         except (SyntaxError, ValueError, UnicodeError):
             warnings.append(f"Cannot parse {path}")
             continue
+        loaders = {"__import__", "import_module"}
+        for node in nodes:
+            if isinstance(node, ast.ImportFrom) and node.module in ("importlib", "builtins"):
+                loaders.update(alias.asname or alias.name for alias in node.names
+                               if alias.name in ("import_module", "__import__"))
         for node in nodes:
             if isinstance(node, ast.Import):
                 imports.update(alias.name for alias in node.names)
@@ -91,8 +96,14 @@ def build(sources):
                 imports.update(".".join(filter(None, [base, alias.name])) for alias in node.names)
             elif isinstance(node, ast.Call):
                 target = node.func
-                if getattr(target, "id", "") in {"__import__", "import_module"} or getattr(target, "attr", "") == "import_module":
-                    warnings.append(f"Dynamic import in {path}:{node.lineno}")
+                if getattr(target, "id", "") in loaders or getattr(target, "attr", "") in ("import_module", "__import__"):
+                    arg = node.args[0] if node.args else None
+                    # Multi-argument calls can change package context or request a fromlist.
+                    if (len(node.args) == 1 and not node.keywords and isinstance(arg, ast.Constant)
+                            and isinstance(arg.value, str) and all(p.isidentifier() for p in arg.value.split("."))):
+                        imports.add(arg.value)
+                    else:
+                        warnings.append(f"Dynamic import in {path}:{node.lineno}")
         for imported in imports:
             parts = imported.split(".")
             for length in range(1, len(parts) + 1):

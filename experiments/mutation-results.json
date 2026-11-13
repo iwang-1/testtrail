@@ -1,0 +1,49 @@
+{
+  "repository": "iwang-1/batchwindow",
+  "revision": "ee8b56e4914205442ade83cd970470b072475255",
+  "cases": [
+    {
+      "file": "planner.py",
+      "substitution": [
+        "return setup + len(batch)",
+        "return setup + 1 + len(batch)"
+      ],
+      "selected": [
+        "tests/test_oracle.py",
+        "tests/test_planner.py"
+      ],
+      "failed": [
+        "tests/test_oracle.py",
+        "tests/test_planner.py"
+      ]
+    },
+    {
+      "file": "planner.py",
+      "substitution": [
+        "now = max(now, future[0].arrival)",
+        "now = future[0].arrival"
+      ],
+      "selected": [
+        "tests/test_oracle.py",
+        "tests/test_planner.py"
+      ],
+      "failed": [
+        "tests/test_oracle.py",
+        "tests/test_planner.py"
+      ]
+    },
+    {
+      "file": "oracle.py",
+      "substitution": [
+        "return min(states[full])",
+        "return max(states[full])"
+      ],
+      "selected": [
+        "tests/test_oracle.py"
+      ],
+      "failed": [
+        "tests/test_oracle.py"
+      ]
+    }
+  ]
+}

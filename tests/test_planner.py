@@ -79,3 +79,17 @@ class RevisionTests(unittest.TestCase):
 
     def test_identical_commits(self):
         self.assertEqual(plan(self.root, "HEAD", "HEAD")["tests"], [])
+
+    def test_literal_aliased_loader_selects_real_dependency(self):
+        self.write("consumer.py", "from importlib import import_module as load\nload('lib')")
+        self.write("tests/test_consumer.py", "import consumer")
+        self.commit()
+        self.write("lib.py", "value=9")
+        self.commit()
+        report = self.compare()
+        self.assertEqual(report["mode"], "static")
+        self.assertEqual(next(r["chain"] for r in report["tests"] if "consumer" in r["test"]),
+                         ["tests/test_consumer.py", "consumer.py", "lib.py"])
+        self.write("consumer.py", "from importlib import import_module as load\nload(module_name)")
+        self.commit()
+        self.assertEqual(self.compare()["mode"], "full")
